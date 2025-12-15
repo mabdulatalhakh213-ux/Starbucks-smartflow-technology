@@ -8,6 +8,7 @@ export interface Order {
   status: OrderStatus;
   created: string;
   cubbyId?: number;
+  customerName?: string;
 }
 
 export interface StoreStats {

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Order, StoreStats, TrafficMode, Cubby, SensorData, OrderStatus } from '@/types/store';
+import { toast } from 'sonner';
 
 const MENU_ITEMS = [
   "Iced Caramel Macchiato",
@@ -18,9 +19,15 @@ const MENU_ITEMS = [
   "Green Tea Latte"
 ];
 
+const CUSTOMER_NAMES = [
+  "Alex", "Jordan", "Taylor", "Morgan", "Casey", "Riley", "Quinn", "Avery",
+  "Parker", "Skyler", "Jamie", "Drew", "Reese", "Cameron", "Dakota", "Sage",
+  "Blake", "Charlie", "Finley", "Hayden", "Jesse", "Kai", "Lane", "Micah"
+];
+
 const clamp = (n: number, min: number, max: number) => Math.max(min, Math.min(max, n));
 const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
-const nowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+const nowTime = () => new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
 const generateInitialCubbies = (): Cubby[] => {
   return Array.from({ length: 12 }, (_, i) => ({
@@ -43,9 +50,9 @@ export const useStoreSimulation = () => {
   const [mode, setMode] = useState<TrafficMode>('normal');
   const [orderCounter, setOrderCounter] = useState(104);
   const [orders, setOrders] = useState<Order[]>([
-    { id: 102, item: "Iced Caramel Macchiato", status: "prep", created: nowTime() },
-    { id: 103, item: "Caffè Latte", status: "almost", created: nowTime() },
-    { id: 104, item: "Matcha Latte", status: "ready", created: nowTime(), cubbyId: 3 },
+    { id: 102, item: "Iced Caramel Macchiato", status: "prep", created: nowTime(), customerName: "Alex" },
+    { id: 103, item: "Caffè Latte", status: "almost", created: nowTime(), customerName: "Jordan" },
+    { id: 104, item: "Matcha Latte", status: "ready", created: nowTime(), cubbyId: 3, customerName: "Taylor" },
   ]);
   const [stats, setStats] = useState<StoreStats>({
     queueMin: 6,
@@ -56,16 +63,57 @@ export const useStoreSimulation = () => {
   });
   const [cubbies, setCubbies] = useState<Cubby[]>(generateInitialCubbies());
   const [sensors, setSensors] = useState<SensorData[]>(generateInitialSensors());
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [isLive, setIsLive] = useState(true);
+  
+  const prevOrdersRef = useRef<Order[]>(orders);
 
-  const addOrder = useCallback(() => {
+  // Update clock every second
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Watch for order status changes and show toasts
+  useEffect(() => {
+    const prevOrders = prevOrdersRef.current;
+    
+    orders.forEach(order => {
+      const prevOrder = prevOrders.find(o => o.id === order.id);
+      
+      if (prevOrder && prevOrder.status !== order.status) {
+        if (order.status === 'ready') {
+          toast.success(`Order #${order.id} is ready!`, {
+            description: `${order.customerName}'s ${order.item} - Cubby #${order.cubbyId || 'N/A'}`,
+            duration: 5000,
+          });
+        } else if (order.status === 'delayed') {
+          toast.error(`Order #${order.id} delayed`, {
+            description: `${order.customerName}'s order is taking longer than expected`,
+            duration: 4000,
+          });
+        }
+      }
+    });
+    
+    prevOrdersRef.current = orders;
+  }, [orders]);
+
+  const addOrder = useCallback((customerName?: string) => {
     const newId = orderCounter + 1;
     setOrderCounter(newId);
     
+    const name = customerName || CUSTOMER_NAMES[randInt(0, CUSTOMER_NAMES.length - 1)];
+    const item = MENU_ITEMS[randInt(0, MENU_ITEMS.length - 1)];
+    
     const newOrder: Order = {
       id: newId,
-      item: MENU_ITEMS[randInt(0, MENU_ITEMS.length - 1)],
+      item,
       status: 'prep',
       created: nowTime(),
+      customerName: name,
     };
     
     setOrders(prev => [...prev, newOrder]);
@@ -74,11 +122,41 @@ export const useStoreSimulation = () => {
       queueMin: clamp(prev.queueMin + randInt(0, 1), 1, 15),
       inProgress: prev.inProgress + 1,
     }));
+    
+    toast.info(`New order #${newId}`, {
+      description: `${name} ordered ${item}`,
+      duration: 3000,
+    });
   }, [orderCounter]);
+
+  const pickupOrder = useCallback((orderId: number) => {
+    const order = orders.find(o => o.id === orderId);
+    if (!order || order.status !== 'ready') return;
+    
+    // Remove order and free cubby
+    setOrders(prev => prev.filter(o => o.id !== orderId));
+    setCubbies(prev => prev.map(c => 
+      c.orderId === orderId ? { ...c, status: 'empty', orderId: undefined, orderName: undefined } : c
+    ));
+    
+    toast.success(`Order #${orderId} picked up!`, {
+      description: `Thank you, ${order.customerName}!`,
+      duration: 3000,
+    });
+  }, [orders]);
+
+  const markCubbyPickedUp = useCallback((cubbyId: number) => {
+    const cubby = cubbies.find(c => c.id === cubbyId);
+    if (!cubby || cubby.status !== 'ready') return;
+    
+    if (cubby.orderId) {
+      pickupOrder(cubby.orderId);
+    }
+  }, [cubbies, pickupOrder]);
 
   const simulateDelay = useCallback(() => {
     setOrders(prev => {
-      const candidates = prev.filter(o => o.status !== 'ready');
+      const candidates = prev.filter(o => o.status !== 'ready' && o.status !== 'delayed');
       if (candidates.length === 0) return prev;
       
       const pickId = candidates[randInt(0, candidates.length - 1)].id;
@@ -100,19 +178,19 @@ export const useStoreSimulation = () => {
         const pickId = prep[randInt(0, prep.length - 1)].id;
         return prev.map(o => o.id === pickId ? { ...o, status: 'almost' as OrderStatus } : o);
       } else if (almost.length) {
-        const pickId = almost[randInt(0, almost.length - 1)].id;
+        const order = almost[randInt(0, almost.length - 1)];
         const emptyCubby = cubbies.find(c => c.status === 'empty');
         
         if (emptyCubby) {
           setCubbies(c => c.map(cubby => 
             cubby.id === emptyCubby.id 
-              ? { ...cubby, status: 'ready', orderId: pickId }
+              ? { ...cubby, status: 'ready', orderId: order.id, orderName: order.customerName }
               : cubby
           ));
         }
         
         setStats(s => ({ ...s, completed: s.completed + 1 }));
-        return prev.map(o => o.id === pickId ? { ...o, status: 'ready' as OrderStatus, cubbyId: emptyCubby?.id } : o);
+        return prev.map(o => o.id === order.id ? { ...o, status: 'ready' as OrderStatus, cubbyId: emptyCubby?.id } : o);
       }
       return prev;
     });
@@ -123,9 +201,15 @@ export const useStoreSimulation = () => {
     }));
   }, [cubbies]);
 
+  const toggleLive = useCallback(() => {
+    setIsLive(prev => !prev);
+  }, []);
+
   // Main simulation tick
   useEffect(() => {
-    const tickMs = mode === 'rush' ? 2000 : mode === 'calm' ? 2800 : 2400;
+    if (!isLive) return;
+    
+    const tickMs = mode === 'rush' ? 1800 : mode === 'calm' ? 3000 : 2400;
     
     const tick = () => {
       // Update stats based on mode
@@ -146,6 +230,8 @@ export const useStoreSimulation = () => {
           newStats.avgPrep = clamp(prev.avgPrep + (Math.random() * 0.2 - 0.1), 4.0, 6.2);
         }
         
+        newStats.inProgress = orders.filter(o => o.status !== 'ready').length;
+        
         return newStats;
       });
 
@@ -154,59 +240,57 @@ export const useStoreSimulation = () => {
         let updated = prev.map(o => {
           const roll = Math.random();
           
-          if (o.status === 'prep' && roll > 0.65) {
+          if (o.status === 'prep' && roll > 0.60) {
             return { ...o, status: 'almost' as OrderStatus };
           }
-          if (o.status === 'almost' && roll > 0.60) {
+          if (o.status === 'almost' && roll > 0.55) {
             const emptyCubby = cubbies.find(c => c.status === 'empty');
+            if (emptyCubby) {
+              setCubbies(c => c.map(cubby => 
+                cubby.id === emptyCubby.id 
+                  ? { ...cubby, status: 'ready', orderId: o.id, orderName: o.customerName }
+                  : cubby
+              ));
+            }
             setStats(s => ({ ...s, completed: s.completed + 1 }));
             return { ...o, status: 'ready' as OrderStatus, cubbyId: emptyCubby?.id };
           }
-          if (o.status === 'delayed' && roll > 0.70) {
+          if (o.status === 'delayed' && roll > 0.75) {
             return { ...o, status: 'prep' as OrderStatus };
           }
           return o;
         });
 
         // Auto-add orders based on mode
-        const addChance = mode === 'rush' ? 0.5 : mode === 'calm' ? 0.15 : 0.3;
+        const addChance = mode === 'rush' ? 0.45 : mode === 'calm' ? 0.12 : 0.25;
         if (Math.random() < addChance && updated.length < 15) {
           const newId = orderCounter + 1;
           setOrderCounter(newId);
+          const name = CUSTOMER_NAMES[randInt(0, CUSTOMER_NAMES.length - 1)];
           updated.push({
             id: newId,
             item: MENU_ITEMS[randInt(0, MENU_ITEMS.length - 1)],
             status: 'prep',
             created: nowTime(),
+            customerName: name,
           });
         }
 
-        // Remove old ready orders to prevent infinite growth
+        // Auto-pickup old ready orders
         const ready = updated.filter(o => o.status === 'ready');
-        if (updated.length > 12 && ready.length > 4) {
-          const oldestReadyIndex = updated.findIndex(o => o.status === 'ready');
-          if (oldestReadyIndex !== -1) {
-            const removedOrder = updated[oldestReadyIndex];
-            updated.splice(oldestReadyIndex, 1);
+        if (updated.length > 10 && ready.length > 3 && Math.random() > 0.6) {
+          const oldestReady = ready[0];
+          if (oldestReady) {
             setCubbies(c => c.map(cubby => 
-              cubby.orderId === removedOrder.id 
-                ? { ...cubby, status: 'empty', orderId: undefined }
+              cubby.orderId === oldestReady.id 
+                ? { ...cubby, status: 'empty', orderId: undefined, orderName: undefined }
                 : cubby
             ));
+            updated = updated.filter(o => o.id !== oldestReady.id);
           }
         }
 
         return updated;
-      });
-
-      // Update cubbies based on ready orders
-      setCubbies(prev => {
-        return prev.map(cubby => {
-          if (cubby.status === 'ready' && Math.random() > 0.85) {
-            return { ...cubby, status: 'empty', orderId: undefined };
-          }
-          return cubby;
-        });
       });
 
       // Update sensor data with realistic fluctuations
@@ -214,27 +298,27 @@ export const useStoreSimulation = () => {
         let newValue = sensor.value;
         
         if (sensor.type === 'motion') {
-          const modifier = mode === 'rush' ? 1.3 : mode === 'calm' ? 0.7 : 1;
-          newValue = clamp(sensor.value + randInt(-3, 5) * modifier, 5, 60);
+          const modifier = mode === 'rush' ? 1.4 : mode === 'calm' ? 0.6 : 1;
+          newValue = clamp(sensor.value + randInt(-4, 6) * modifier, 5, 65);
         } else if (sensor.type === 'proximity') {
-          newValue = clamp(sensor.value + randInt(-8, 8), 20, 95);
+          newValue = clamp(sensor.value + randInt(-10, 10), 15, 98);
         } else if (sensor.type === 'occupancy') {
-          newValue = clamp(sensor.value + randInt(-1, 2), 0, 12);
+          newValue = clamp(sensor.value + randInt(-1, 2), 0, 15);
         } else if (sensor.type === 'temperature') {
-          newValue = sensor.value + (Math.random() * 2 - 1);
+          newValue = sensor.value + (Math.random() * 3 - 1.5);
         }
         
         return {
           ...sensor,
           value: Math.round(newValue * 10) / 10,
-          status: sensor.type === 'temperature' && (newValue < 35 || newValue > 150) ? 'warning' : 'active',
+          status: sensor.type === 'temperature' && (newValue < 32 || newValue > 155) ? 'warning' : 'active',
         };
       }));
     };
 
     const interval = setInterval(tick, tickMs);
     return () => clearInterval(interval);
-  }, [mode, orderCounter, cubbies]);
+  }, [mode, orderCounter, cubbies, isLive, orders.length]);
 
   return {
     mode,
@@ -243,8 +327,13 @@ export const useStoreSimulation = () => {
     stats,
     cubbies,
     sensors,
+    currentTime,
+    isLive,
     addOrder,
     simulateDelay,
     speedUp,
+    pickupOrder,
+    markCubbyPickedUp,
+    toggleLive,
   };
 };
