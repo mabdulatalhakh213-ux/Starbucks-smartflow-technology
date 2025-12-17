@@ -1,0 +1,1498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Starbucks Smart Store – Queue & Pickup Technology</title>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --starbucks-green: #00704A;
+      --starbucks-green-dark: #1E3932;
+      --starbucks-green-light: #D4E9E2;
+      --starbucks-gold: #CBA258;
+      --starbucks-cream: #F2F0EB;
+      --background: #FAFAF8;
+      --card: #FFFFFF;
+      --text: #1E3932;
+      --text-muted: #64748B;
+      --border: #E2E8F0;
+      --success: #16A34A;
+      --warning: #F59E0B;
+      --error: #EF4444;
+      --info: #3B82F6;
+      --radius: 16px;
+      --shadow: 0 4px 20px rgba(0, 112, 74, 0.08);
+      --shadow-lg: 0 10px 40px rgba(0, 112, 74, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Sora', system-ui, -apple-system, sans-serif;
+      background: linear-gradient(180deg, var(--background) 0%, var(--starbucks-cream) 50%, #fff 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--starbucks-green-dark) 0%, var(--starbucks-green) 100%);
+      color: white;
+      padding: 16px 24px;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .header-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .logo-container {
+      width: 50px;
+      height: 50px;
+      background: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+
+    .logo-container svg {
+      width: 40px;
+      height: 40px;
+    }
+
+    .brand-text h1 {
+      font-size: 20px;
+      font-weight: 700;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-text p {
+      font-size: 12px;
+      opacity: 0.9;
+      margin-top: 2px;
+    }
+
+    .header-controls {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .live-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,0.15);
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .live-dot {
+      width: 10px;
+      height: 10px;
+      background: #22C55E;
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .live-dot.paused {
+      background: var(--warning);
+      animation: none;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(1.2); }
+    }
+
+    .clock {
+      font-family: 'Courier New', monospace;
+      font-size: 14px;
+      font-weight: 700;
+      background: rgba(255,255,255,0.1);
+      padding: 8px 16px;
+      border-radius: 8px;
+    }
+
+    .mode-selector {
+      display: flex;
+      gap: 8px;
+      background: rgba(255,255,255,0.1);
+      padding: 6px;
+      border-radius: 999px;
+    }
+
+    .mode-btn {
+      padding: 8px 16px;
+      border: none;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      background: transparent;
+      color: white;
+    }
+
+    .mode-btn.active {
+      background: white;
+      color: var(--starbucks-green);
+    }
+
+    .mode-btn:hover:not(.active) {
+      background: rgba(255,255,255,0.2);
+    }
+
+    .toggle-btn {
+      padding: 8px 16px;
+      border: 1px solid rgba(255,255,255,0.3);
+      border-radius: 8px;
+      background: transparent;
+      color: white;
+      font-size: 12px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .toggle-btn:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    /* Main Layout */
+    main {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      main {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .left-column {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .right-column {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    /* Card */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .card-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .card-header h2 {
+      font-size: 16px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .card-header .icon {
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .card-body {
+      padding: 20px 24px;
+    }
+
+    /* Queue Prediction */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+
+    .metric-card {
+      background: linear-gradient(135deg, var(--starbucks-green-light) 0%, #F0F9F6 100%);
+      border-radius: 12px;
+      padding: 20px;
+      border: 1px solid rgba(0, 112, 74, 0.1);
+    }
+
+    .metric-card.warning {
+      background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+      border-color: rgba(245, 158, 11, 0.2);
+    }
+
+    .metric-card.info {
+      background: linear-gradient(135deg, #DBEAFE 0%, #EFF6FF 100%);
+      border-color: rgba(59, 130, 246, 0.2);
+    }
+
+    .metric-label {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .metric-value {
+      font-size: 36px;
+      font-weight: 800;
+      color: var(--starbucks-green-dark);
+      margin-top: 8px;
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+    }
+
+    .metric-value .unit {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: rgba(0, 112, 74, 0.1);
+      border-radius: 999px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--starbucks-green) 0%, var(--starbucks-gold) 100%);
+      border-radius: 999px;
+      transition: width 0.5s ease;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge.success {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+
+    .badge.warning {
+      background: #FEF3C7;
+      color: #B45309;
+    }
+
+    .badge.error {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    .badge.info {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: currentColor;
+    }
+
+    /* Cubbies */
+    .cubbies-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width: 768px) {
+      .cubbies-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    .cubby {
+      aspect-ratio: 1;
+      border-radius: 12px;
+      border: 2px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+      background: var(--card);
+    }
+
+    .cubby.empty {
+      background: #F8FAFC;
+      border-style: dashed;
+    }
+
+    .cubby.ready {
+      background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%);
+      border-color: var(--success);
+      animation: cubby-pulse 2s infinite;
+    }
+
+    .cubby.waiting {
+      background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+      border-color: var(--warning);
+    }
+
+    @keyframes cubby-pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(22, 163, 74, 0.4); }
+      50% { box-shadow: 0 0 0 8px rgba(22, 163, 74, 0); }
+    }
+
+    .cubby:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow);
+    }
+
+    .cubby-number {
+      font-size: 20px;
+      font-weight: 800;
+      color: var(--starbucks-green-dark);
+    }
+
+    .cubby-status {
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .cubby.ready .cubby-status {
+      color: var(--success);
+    }
+
+    .cubby.waiting .cubby-status {
+      color: var(--warning);
+    }
+
+    .cubby-order {
+      font-size: 11px;
+      color: var(--text-muted);
+      max-width: 90%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .cubby-temp {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      font-size: 14px;
+    }
+
+    /* Order Board */
+    .order-stats {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .order-stat {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .order-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .order-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      background: #F8FAFC;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .order-item:hover {
+      background: #F1F5F9;
+      transform: translateX(4px);
+    }
+
+    .order-item.ready {
+      background: linear-gradient(135deg, #DCFCE7 0%, #F0FDF4 100%);
+      border-color: var(--success);
+    }
+
+    .order-item.delayed {
+      background: linear-gradient(135deg, #FEE2E2 0%, #FEF2F2 100%);
+      border-color: var(--error);
+    }
+
+    .order-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .order-id {
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .order-meta {
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    .order-status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .order-status.prep {
+      background: #FEF3C7;
+      color: #B45309;
+    }
+
+    .order-status.almost {
+      background: #DBEAFE;
+      color: #1D4ED8;
+    }
+
+    .order-status.ready {
+      background: #DCFCE7;
+      color: #15803D;
+    }
+
+    .order-status.delayed {
+      background: #FEE2E2;
+      color: #DC2626;
+    }
+
+    /* Sensors */
+    .sensors-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .sensor-card {
+      background: #F8FAFC;
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid var(--border);
+      transition: all 0.3s ease;
+    }
+
+    .sensor-card:hover {
+      box-shadow: var(--shadow);
+    }
+
+    .sensor-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .sensor-name {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+    }
+
+    .sensor-status {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--success);
+    }
+
+    .sensor-status.warning {
+      background: var(--warning);
+    }
+
+    .sensor-value {
+      font-size: 24px;
+      font-weight: 800;
+      color: var(--starbucks-green-dark);
+    }
+
+    .sensor-unit {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 4px;
+    }
+
+    /* Demo Controls */
+    .control-buttons {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    .control-btn {
+      padding: 12px 20px;
+      border: none;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .control-btn.primary {
+      background: var(--starbucks-green);
+      color: white;
+    }
+
+    .control-btn.primary:hover {
+      background: var(--starbucks-green-dark);
+      transform: translateY(-2px);
+    }
+
+    .control-btn.secondary {
+      background: white;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .control-btn.secondary:hover {
+      background: #F8FAFC;
+    }
+
+    .control-btn.danger {
+      background: var(--error);
+      color: white;
+    }
+
+    .control-btn.danger:hover {
+      background: #DC2626;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, var(--starbucks-green-light) 0%, #F0F9F6 100%);
+      border-radius: 12px;
+      padding: 16px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stat-value {
+      font-size: 28px;
+      font-weight: 800;
+      color: var(--starbucks-green-dark);
+      margin-top: 4px;
+    }
+
+    .tip-box {
+      background: linear-gradient(135deg, #FEF3C7 0%, #FFFBEB 100%);
+      border-radius: 12px;
+      padding: 16px;
+      border: 1px solid rgba(245, 158, 11, 0.2);
+    }
+
+    .tip-box h4 {
+      font-size: 13px;
+      font-weight: 700;
+      color: #B45309;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .tip-box p {
+      font-size: 12px;
+      color: #92400E;
+      line-height: 1.5;
+    }
+
+    /* Name Input */
+    .name-input-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .name-input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 13px;
+      font-family: inherit;
+      outline: none;
+      transition: all 0.2s;
+    }
+
+    .name-input:focus {
+      border-color: var(--starbucks-green);
+      box-shadow: 0 0 0 3px rgba(0, 112, 74, 0.1);
+    }
+
+    /* Toast Notifications */
+    .toast-container {
+      position: fixed;
+      top: 100px;
+      right: 24px;
+      z-index: 1000;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .toast {
+      background: white;
+      border-radius: 12px;
+      padding: 16px 20px;
+      box-shadow: var(--shadow-lg);
+      border-left: 4px solid var(--starbucks-green);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: slide-in 0.3s ease;
+      min-width: 300px;
+    }
+
+    .toast.success {
+      border-left-color: var(--success);
+    }
+
+    .toast.warning {
+      border-left-color: var(--warning);
+    }
+
+    .toast.error {
+      border-left-color: var(--error);
+    }
+
+    @keyframes slide-in {
+      from {
+        transform: translateX(100%);
+        opacity: 0;
+      }
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    .toast-icon {
+      font-size: 20px;
+    }
+
+    .toast-content {
+      flex: 1;
+    }
+
+    .toast-title {
+      font-weight: 700;
+      font-size: 13px;
+    }
+
+    .toast-message {
+      font-size: 12px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .toast-close {
+      background: none;
+      border: none;
+      font-size: 18px;
+      cursor: pointer;
+      color: var(--text-muted);
+      padding: 4px;
+    }
+
+    /* Footer */
+    footer {
+      text-align: center;
+      padding: 32px 24px 48px;
+    }
+
+    .footer-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 12px;
+      background: white;
+      padding: 12px 24px;
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      border: 1px solid var(--border);
+    }
+
+    .footer-dot {
+      width: 10px;
+      height: 10px;
+      background: var(--success);
+      border-radius: 50%;
+      animation: pulse 2s infinite;
+    }
+
+    .footer-text {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .footer-sub {
+      margin-top: 16px;
+      font-size: 12px;
+      color: var(--text-muted);
+    }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: #F1F5F9;
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #CBD5E1;
+      border-radius: 999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: #94A3B8;
+    }
+  </style>
+</head>
+<body>
+  <!-- Toast Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="header-content">
+      <div class="brand">
+        <div class="logo-container">
+          <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" style="stop-color:#00704A"/>
+                <stop offset="100%" style="stop-color:#1E3932"/>
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="48" fill="url(#logoGradient)"/>
+            <circle cx="50" cy="50" r="44" fill="none" stroke="white" stroke-width="2"/>
+            <circle cx="50" cy="50" r="38" fill="none" stroke="white" stroke-width="1"/>
+            <text x="50" y="58" text-anchor="middle" fill="white" font-family="serif" font-size="16" font-weight="bold">☆</text>
+            <text x="50" y="30" text-anchor="middle" fill="white" font-size="6" font-weight="bold">STARBUCKS</text>
+            <text x="50" y="78" text-anchor="middle" fill="white" font-size="5">COFFEE</text>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Smart Store Technology</h1>
+          <p>Queue Prediction & Pickup System</p>
+        </div>
+      </div>
+
+      <div class="header-controls">
+        <div class="live-indicator">
+          <div class="live-dot" id="liveDot"></div>
+          <span id="liveText">LIVE</span>
+        </div>
+        <div class="clock" id="clock">00:00:00</div>
+        <div class="mode-selector">
+          <button class="mode-btn active" data-mode="normal">Normal</button>
+          <button class="mode-btn" data-mode="rush">Rush Hour</button>
+          <button class="mode-btn" data-mode="calm">Calm</button>
+        </div>
+        <button class="toggle-btn" id="toggleLive">Pause</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main>
+    <div class="left-column">
+      <!-- Queue Prediction -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span class="icon">📊</span>
+            Smart Queue Prediction
+          </h2>
+          <span class="badge success"><span class="badge-dot"></span>AI Powered</span>
+        </div>
+        <div class="card-body">
+          <div class="metrics-grid">
+            <div class="metric-card">
+              <div class="metric-label">
+                Estimated Queue Time
+                <span class="badge warning" id="queueBadge"><span class="badge-dot"></span>Medium</span>
+              </div>
+              <div class="metric-value">
+                <span id="queueTime">6</span>
+                <span class="unit">min</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="queueBar" style="width: 40%"></div>
+              </div>
+            </div>
+
+            <div class="metric-card info">
+              <div class="metric-label">
+                Store Traffic
+                <span class="badge info" id="trafficBadge"><span class="badge-dot"></span>Moderate</span>
+              </div>
+              <div class="metric-value">
+                <span id="footfall">18</span>
+                <span class="unit">people</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="trafficBar" style="width: 40%"></div>
+              </div>
+            </div>
+
+            <div class="metric-card warning">
+              <div class="metric-label">
+                Orders In Progress
+                <span class="badge warning" id="loadBadge"><span class="badge-dot"></span>Medium</span>
+              </div>
+              <div class="metric-value">
+                <span id="inProgress">8</span>
+                <span class="unit">orders</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="loadBar" style="width: 45%"></div>
+              </div>
+            </div>
+
+            <div class="metric-card">
+              <div class="metric-label">
+                Avg Prep Time
+                <span class="badge success"><span class="badge-dot"></span>On Track</span>
+              </div>
+              <div class="metric-value">
+                <span id="avgPrep">4.8</span>
+                <span class="unit">min</span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" id="prepBar" style="width: 35%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pickup Cubbies -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span class="icon">📦</span>
+            Smart Pickup Cubbies
+          </h2>
+          <span class="badge info"><span class="badge-dot"></span>IoT Connected</span>
+        </div>
+        <div class="card-body">
+          <div class="cubbies-grid" id="cubbiesGrid"></div>
+        </div>
+      </div>
+
+      <!-- Order Board -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span class="icon">📋</span>
+            Digital Order Board
+          </h2>
+          <span class="badge success"><span class="badge-dot"></span>Real-time</span>
+        </div>
+        <div class="card-body">
+          <div class="order-stats" id="orderStats"></div>
+          <div class="order-list" id="orderList"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="right-column">
+      <!-- Sensors -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span class="icon">📡</span>
+            Sensor Monitor
+          </h2>
+          <span class="badge success"><span class="badge-dot"></span>All Online</span>
+        </div>
+        <div class="card-body">
+          <div class="sensors-grid" id="sensorsGrid"></div>
+        </div>
+      </div>
+
+      <!-- Demo Controls -->
+      <div class="card">
+        <div class="card-header">
+          <h2>
+            <span class="icon">🎮</span>
+            Demo Controls
+          </h2>
+          <span class="badge warning"><span class="badge-dot"></span>Manager</span>
+        </div>
+        <div class="card-body">
+          <div class="name-input-group">
+            <input type="text" class="name-input" id="customerName" placeholder="Customer name (optional)">
+          </div>
+          <div class="control-buttons">
+            <button class="control-btn primary" id="btnAddOrder">
+              ➕ Add Order
+            </button>
+            <button class="control-btn secondary" id="btnSpeedUp">
+              ⚡ Speed Up
+            </button>
+            <button class="control-btn danger" id="btnDelay">
+              ⏱️ Delay
+            </button>
+          </div>
+
+          <div class="stats-grid">
+            <div class="stat-card">
+              <div class="stat-label">Completed Today</div>
+              <div class="stat-value" id="completed">42</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Efficiency Score</div>
+              <div class="stat-value" id="efficiency">94%</div>
+            </div>
+          </div>
+
+          <div class="tip-box">
+            <h4>💡 Hackathon Tip</h4>
+            <p>Switch to <strong>Rush Hour</strong> mode, add 2-3 orders, then show how the queue prediction updates and guides customers to reduce congestion.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-badge">
+      <div class="footer-dot"></div>
+      <span class="footer-text">Smart Store Technology</span>
+      <span style="color: var(--text-muted);">•</span>
+      <span style="font-size: 12px; color: var(--text-muted);">Hackathon Prototype</span>
+    </div>
+    <p class="footer-sub">Queue Prediction • Pickup Cubbies • Digital Ordering • IoT Sensors</p>
+  </footer>
+
+  <script>
+    // ==================== STATE ====================
+    const CUSTOMER_NAMES = ['Emma', 'Liam', 'Olivia', 'Noah', 'Ava', 'Sophia', 'Jackson', 'Lucas', 'Mia', 'Aiden', 'Isabella', 'Ethan', 'Harper', 'Mason', 'Evelyn', 'Logan', 'Abigail', 'James', 'Emily', 'Benjamin'];
+    const MENU_ITEMS = ['Caramel Macchiato', 'Caffè Latte', 'Cappuccino', 'Vanilla Latte', 'Mocha', 'Americano', 'Cold Brew', 'Matcha Latte', 'Flat White', 'Chai Latte', 'Iced Coffee', 'Frappuccino'];
+    
+    let state = {
+      mode: 'normal',
+      isLive: true,
+      orderCounter: 1000,
+      stats: {
+        queueTime: 6,
+        footfall: 18,
+        inProgress: 8,
+        completed: 42,
+        avgPrep: 4.8
+      },
+      orders: [],
+      cubbies: Array.from({ length: 8 }, (_, i) => ({
+        id: i + 1,
+        status: 'empty',
+        orderId: null,
+        orderName: null,
+        temperature: null
+      })),
+      sensors: [
+        { id: 'motion', name: 'Motion Sensor', value: 24, unit: 'detections/min', status: 'normal' },
+        { id: 'temp', name: 'Temperature', value: 21.5, unit: '°C', status: 'normal' },
+        { id: 'proximity', name: 'Proximity', value: 3, unit: 'customers', status: 'normal' },
+        { id: 'occupancy', name: 'Occupancy', value: 67, unit: '%', status: 'normal' }
+      ]
+    };
+
+    // Initialize with some orders
+    for (let i = 0; i < 5; i++) {
+      state.orderCounter++;
+      const statuses = ['preparing', 'almost', 'ready', 'preparing', 'preparing'];
+      state.orders.push({
+        id: state.orderCounter,
+        customerName: CUSTOMER_NAMES[Math.floor(Math.random() * CUSTOMER_NAMES.length)],
+        item: MENU_ITEMS[Math.floor(Math.random() * MENU_ITEMS.length)],
+        status: statuses[i],
+        createdAt: new Date(),
+        cubbyId: statuses[i] === 'ready' ? 1 : null
+      });
+    }
+
+    // Assign first ready order to cubby
+    state.cubbies[0] = {
+      id: 1,
+      status: 'ready',
+      orderId: state.orders.find(o => o.status === 'ready')?.id,
+      orderName: state.orders.find(o => o.status === 'ready')?.customerName,
+      temperature: 'hot'
+    };
+
+    // ==================== DOM ELEMENTS ====================
+    const els = {
+      clock: document.getElementById('clock'),
+      liveDot: document.getElementById('liveDot'),
+      liveText: document.getElementById('liveText'),
+      toggleLive: document.getElementById('toggleLive'),
+      queueTime: document.getElementById('queueTime'),
+      queueBadge: document.getElementById('queueBadge'),
+      queueBar: document.getElementById('queueBar'),
+      footfall: document.getElementById('footfall'),
+      trafficBadge: document.getElementById('trafficBadge'),
+      trafficBar: document.getElementById('trafficBar'),
+      inProgress: document.getElementById('inProgress'),
+      loadBadge: document.getElementById('loadBadge'),
+      loadBar: document.getElementById('loadBar'),
+      avgPrep: document.getElementById('avgPrep'),
+      prepBar: document.getElementById('prepBar'),
+      completed: document.getElementById('completed'),
+      efficiency: document.getElementById('efficiency'),
+      cubbiesGrid: document.getElementById('cubbiesGrid'),
+      orderList: document.getElementById('orderList'),
+      orderStats: document.getElementById('orderStats'),
+      sensorsGrid: document.getElementById('sensorsGrid'),
+      toastContainer: document.getElementById('toastContainer'),
+      customerName: document.getElementById('customerName'),
+      btnAddOrder: document.getElementById('btnAddOrder'),
+      btnSpeedUp: document.getElementById('btnSpeedUp'),
+      btnDelay: document.getElementById('btnDelay')
+    };
+
+    // ==================== UTILITIES ====================
+    const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
+    const randInt = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const randFloat = (min, max) => Math.random() * (max - min) + min;
+
+    function formatTime(date) {
+      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+    }
+
+    function showToast(title, message, type = 'success') {
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      const icons = { success: '✅', warning: '⚠️', error: '❌', info: 'ℹ️' };
+      toast.innerHTML = `
+        <span class="toast-icon">${icons[type]}</span>
+        <div class="toast-content">
+          <div class="toast-title">${title}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      els.toastContainer.appendChild(toast);
+      setTimeout(() => toast.remove(), 4000);
+    }
+
+    // ==================== RENDERING ====================
+    function updateClock() {
+      els.clock.textContent = formatTime(new Date());
+    }
+
+    function renderStats() {
+      const s = state.stats;
+      
+      els.queueTime.textContent = Math.round(s.queueTime);
+      els.footfall.textContent = Math.round(s.footfall);
+      els.inProgress.textContent = state.orders.filter(o => o.status !== 'ready').length;
+      els.avgPrep.textContent = s.avgPrep.toFixed(1);
+      els.completed.textContent = s.completed;
+      els.efficiency.textContent = Math.round(94 - (s.queueTime - 6) * 2) + '%';
+
+      // Progress bars
+      els.queueBar.style.width = clamp((s.queueTime / 15) * 100, 5, 100) + '%';
+      els.trafficBar.style.width = clamp((s.footfall / 45) * 100, 5, 100) + '%';
+      els.loadBar.style.width = clamp((state.orders.filter(o => o.status !== 'ready').length / 15) * 100, 5, 100) + '%';
+      els.prepBar.style.width = clamp((s.avgPrep / 10) * 100, 5, 100) + '%';
+
+      // Badges
+      const queueLevel = s.queueTime <= 4 ? 'Low' : s.queueTime <= 8 ? 'Medium' : 'High';
+      const queueClass = s.queueTime <= 4 ? 'success' : s.queueTime <= 8 ? 'warning' : 'error';
+      els.queueBadge.className = `badge ${queueClass}`;
+      els.queueBadge.innerHTML = `<span class="badge-dot"></span>${queueLevel}`;
+
+      const trafficLevel = s.footfall <= 15 ? 'Low' : s.footfall <= 30 ? 'Moderate' : 'Busy';
+      const trafficClass = s.footfall <= 15 ? 'success' : s.footfall <= 30 ? 'info' : 'warning';
+      els.trafficBadge.className = `badge ${trafficClass}`;
+      els.trafficBadge.innerHTML = `<span class="badge-dot"></span>${trafficLevel}`;
+
+      const inProg = state.orders.filter(o => o.status !== 'ready').length;
+      const loadLevel = inProg <= 5 ? 'Light' : inProg <= 10 ? 'Medium' : 'High';
+      const loadClass = inProg <= 5 ? 'success' : inProg <= 10 ? 'warning' : 'error';
+      els.loadBadge.className = `badge ${loadClass}`;
+      els.loadBadge.innerHTML = `<span class="badge-dot"></span>${loadLevel}`;
+    }
+
+    function renderCubbies() {
+      els.cubbiesGrid.innerHTML = state.cubbies.map(c => {
+        const tempIcon = c.temperature === 'hot' ? '🔥' : c.temperature === 'cold' ? '❄️' : '';
+        return `
+          <div class="cubby ${c.status}" onclick="handleCubbyClick(${c.id})">
+            ${tempIcon ? `<span class="cubby-temp">${tempIcon}</span>` : ''}
+            <span class="cubby-number">${c.id}</span>
+            <span class="cubby-status">${c.status === 'empty' ? 'Available' : c.status === 'ready' ? 'Ready!' : 'Waiting'}</span>
+            ${c.orderName ? `<span class="cubby-order">${c.orderName}</span>` : ''}
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderOrders() {
+      const counts = {
+        preparing: state.orders.filter(o => o.status === 'preparing').length,
+        almost: state.orders.filter(o => o.status === 'almost').length,
+        ready: state.orders.filter(o => o.status === 'ready').length,
+        delayed: state.orders.filter(o => o.status === 'delayed').length
+      };
+
+      els.orderStats.innerHTML = `
+        <div class="order-stat"><span style="color: var(--warning);">🟡</span> ${counts.preparing} Preparing</div>
+        <div class="order-stat"><span style="color: var(--info);">🔵</span> ${counts.almost} Almost</div>
+        <div class="order-stat"><span style="color: var(--success);">🟢</span> ${counts.ready} Ready</div>
+        ${counts.delayed > 0 ? `<div class="order-stat"><span style="color: var(--error);">🔴</span> ${counts.delayed} Delayed</div>` : ''}
+      `;
+
+      const sortedOrders = [...state.orders].sort((a, b) => {
+        const priority = { ready: 0, almost: 1, preparing: 2, delayed: 3 };
+        return priority[a.status] - priority[b.status];
+      });
+
+      els.orderList.innerHTML = sortedOrders.map(o => {
+        const statusLabels = { preparing: 'Preparing', almost: 'Almost Ready', ready: 'Ready', delayed: 'Delayed' };
+        const statusIcons = { preparing: '🔄', almost: '⏳', ready: '✅', delayed: '⚠️' };
+        const itemClass = o.status === 'ready' ? 'ready' : o.status === 'delayed' ? 'delayed' : '';
+        
+        return `
+          <div class="order-item ${itemClass}" onclick="handleOrderClick(${o.id})">
+            <div class="order-info">
+              <span class="order-id">#${o.id} ${o.customerName ? `• ${o.customerName}` : ''}</span>
+              <span class="order-meta">${o.item}${o.cubbyId ? ` • Cubby ${o.cubbyId}` : ''}</span>
+            </div>
+            <span class="order-status ${o.status}">
+              ${statusIcons[o.status]} ${statusLabels[o.status]}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function renderSensors() {
+      els.sensorsGrid.innerHTML = state.sensors.map(s => `
+        <div class="sensor-card">
+          <div class="sensor-header">
+            <span class="sensor-name">${s.name}</span>
+            <span class="sensor-status ${s.status === 'warning' ? 'warning' : ''}"></span>
+          </div>
+          <div class="sensor-value">${typeof s.value === 'number' ? s.value.toFixed(s.unit === '°C' ? 1 : 0) : s.value}</div>
+          <div class="sensor-unit">${s.unit}</div>
+        </div>
+      `).join('');
+    }
+
+    function render() {
+      renderStats();
+      renderCubbies();
+      renderOrders();
+      renderSensors();
+    }
+
+    // ==================== SIMULATION ====================
+    function tick() {
+      if (!state.isLive) return;
+
+      const mode = state.mode;
+      const s = state.stats;
+
+      // Update stats based on mode
+      if (mode === 'rush') {
+        s.queueTime = clamp(s.queueTime + randFloat(-0.5, 1.5), 5, 15);
+        s.footfall = clamp(s.footfall + randInt(-2, 5), 20, 45);
+        s.avgPrep = clamp(s.avgPrep + randFloat(-0.2, 0.4), 5, 8);
+      } else if (mode === 'calm') {
+        s.queueTime = clamp(s.queueTime + randFloat(-1, 0.5), 1, 6);
+        s.footfall = clamp(s.footfall + randInt(-3, 2), 5, 20);
+        s.avgPrep = clamp(s.avgPrep + randFloat(-0.3, 0.1), 3, 5);
+      } else {
+        s.queueTime = clamp(s.queueTime + randFloat(-0.8, 0.8), 3, 10);
+        s.footfall = clamp(s.footfall + randInt(-2, 3), 10, 30);
+        s.avgPrep = clamp(s.avgPrep + randFloat(-0.2, 0.2), 4, 6);
+      }
+
+      // Update sensors
+      state.sensors[0].value = clamp(state.sensors[0].value + randInt(-5, 5), 10, 50);
+      state.sensors[1].value = clamp(state.sensors[1].value + randFloat(-0.5, 0.5), 18, 26);
+      state.sensors[2].value = clamp(state.sensors[2].value + randInt(-2, 2), 0, 10);
+      state.sensors[3].value = clamp(state.sensors[3].value + randInt(-5, 5), 30, 95);
+
+      // Progress orders
+      state.orders.forEach(order => {
+        if (order.status === 'preparing' && Math.random() > 0.7) {
+          order.status = 'almost';
+        } else if (order.status === 'almost' && Math.random() > 0.6) {
+          order.status = 'ready';
+          s.completed++;
+          
+          // Assign to cubby
+          const emptyCubby = state.cubbies.find(c => c.status === 'empty');
+          if (emptyCubby) {
+            emptyCubby.status = 'ready';
+            emptyCubby.orderId = order.id;
+            emptyCubby.orderName = order.customerName;
+            emptyCubby.temperature = Math.random() > 0.5 ? 'hot' : 'cold';
+            order.cubbyId = emptyCubby.id;
+          }
+          
+          showToast('Order Ready!', `${order.customerName}'s ${order.item} is ready at Cubby ${order.cubbyId || 'counter'}`, 'success');
+        } else if (order.status === 'delayed' && Math.random() > 0.8) {
+          order.status = 'preparing';
+        }
+      });
+
+      // Auto add orders in rush mode
+      if (mode === 'rush' && Math.random() > 0.7) {
+        addOrder(null, true);
+      } else if (mode === 'normal' && Math.random() > 0.85) {
+        addOrder(null, true);
+      }
+
+      // Auto pickup old ready orders
+      state.orders.forEach(order => {
+        if (order.status === 'ready') {
+          const age = (Date.now() - order.createdAt) / 1000;
+          if (age > 30 && Math.random() > 0.7) {
+            pickupOrder(order.id, true);
+          }
+        }
+      });
+
+      render();
+    }
+
+    // ==================== ACTIONS ====================
+    function addOrder(customerName = null, silent = false) {
+      state.orderCounter++;
+      const name = customerName || CUSTOMER_NAMES[randInt(0, CUSTOMER_NAMES.length - 1)];
+      const item = MENU_ITEMS[randInt(0, MENU_ITEMS.length - 1)];
+      
+      state.orders.push({
+        id: state.orderCounter,
+        customerName: name,
+        item: item,
+        status: 'preparing',
+        createdAt: new Date(),
+        cubbyId: null
+      });
+
+      state.stats.queueTime = clamp(state.stats.queueTime + randFloat(0.5, 1.5), 1, 15);
+
+      if (!silent) {
+        showToast('New Order', `${name}'s ${item} added to queue`, 'info');
+      }
+      
+      render();
+    }
+
+    function speedUp() {
+      const prepOrders = state.orders.filter(o => o.status === 'preparing' || o.status === 'almost');
+      if (prepOrders.length > 0) {
+        const order = prepOrders[0];
+        if (order.status === 'preparing') {
+          order.status = 'almost';
+          showToast('Speed Up', `${order.customerName}'s order is almost ready!`, 'info');
+        } else {
+          order.status = 'ready';
+          state.stats.completed++;
+          
+          const emptyCubby = state.cubbies.find(c => c.status === 'empty');
+          if (emptyCubby) {
+            emptyCubby.status = 'ready';
+            emptyCubby.orderId = order.id;
+            emptyCubby.orderName = order.customerName;
+            emptyCubby.temperature = Math.random() > 0.5 ? 'hot' : 'cold';
+            order.cubbyId = emptyCubby.id;
+          }
+          
+          showToast('Order Ready!', `${order.customerName}'s order is ready!`, 'success');
+        }
+        state.stats.queueTime = clamp(state.stats.queueTime - 1, 1, 15);
+      }
+      render();
+    }
+
+    function simulateDelay() {
+      const prepOrders = state.orders.filter(o => o.status === 'preparing' || o.status === 'almost');
+      if (prepOrders.length > 0) {
+        const order = prepOrders[randInt(0, prepOrders.length - 1)];
+        order.status = 'delayed';
+        state.stats.queueTime = clamp(state.stats.queueTime + 2, 1, 15);
+        showToast('Delay', `${order.customerName}'s order has been delayed`, 'error');
+      }
+      render();
+    }
+
+    function pickupOrder(orderId, silent = false) {
+      const order = state.orders.find(o => o.id === orderId);
+      if (order && order.status === 'ready') {
+        // Free up cubby
+        const cubby = state.cubbies.find(c => c.orderId === orderId);
+        if (cubby) {
+          cubby.status = 'empty';
+          cubby.orderId = null;
+          cubby.orderName = null;
+          cubby.temperature = null;
+        }
+        
+        // Remove order
+        state.orders = state.orders.filter(o => o.id !== orderId);
+        
+        if (!silent) {
+          showToast('Picked Up', `${order.customerName} collected their order`, 'success');
+        }
+        render();
+      }
+    }
+
+    function handleOrderClick(orderId) {
+      const order = state.orders.find(o => o.id === orderId);
+      if (order && order.status === 'ready') {
+        pickupOrder(orderId);
+      }
+    }
+
+    function handleCubbyClick(cubbyId) {
+      const cubby = state.cubbies.find(c => c.id === cubbyId);
+      if (cubby && cubby.status === 'ready' && cubby.orderId) {
+        pickupOrder(cubby.orderId);
+      }
+    }
+
+    function setMode(mode) {
+      state.mode = mode;
+      document.querySelectorAll('.mode-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.mode === mode);
+      });
+    }
+
+    function toggleLive() {
+      state.isLive = !state.isLive;
+      els.liveDot.classList.toggle('paused', !state.isLive);
+      els.liveText.textContent = state.isLive ? 'LIVE' : 'PAUSED';
+      els.toggleLive.textContent = state.isLive ? 'Pause' : 'Resume';
+    }
+
+    // ==================== EVENT LISTENERS ====================
+    document.querySelectorAll('.mode-btn').forEach(btn => {
+      btn.addEventListener('click', () => setMode(btn.dataset.mode));
+    });
+
+    els.toggleLive.addEventListener('click', toggleLive);
+
+    els.btnAddOrder.addEventListener('click', () => {
+      const name = els.customerName.value.trim() || null;
+      addOrder(name);
+      els.customerName.value = '';
+    });
+
+    els.btnSpeedUp.addEventListener('click', speedUp);
+    els.btnDelay.addEventListener('click', simulateDelay);
+
+    // ==================== INIT ====================
+    updateClock();
+    setInterval(updateClock, 1000);
+    setInterval(tick, 2000);
+    render();
+  </script>
+</body>
+</html>
